@@ -1,0 +1,82 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: wisdomstream_postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-wisdomstream}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: ${POSTGRES_DB:-wisdomstream}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "127.0.0.1:5434:5432"
+    mem_limit: 384m
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wisdomstream}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: wisdomstream_redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    ports:
+      - "127.0.0.1:6379:6379"
+    mem_limit: 160m
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio:
+    # minio/minio is no longer pullable without Docker Hub auth (MinIO gated it in 2025);
+    # bitnamilegacy mirrors the last open MinIO release and stays publicly pullable.
+    image: bitnamilegacy/minio:latest
+    container_name: wisdomstream_minio
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+      MINIO_DEFAULT_BUCKETS: "wisdomstream-avatars,wisdomstream-banners,wisdomstream-thumbnails"
+    volumes:
+      - minio_data:/bitnami/minio/data
+    ports:
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
+    mem_limit: 320m
+    healthcheck:
+      test: ["CMD-SHELL", "curl -sf http://localhost:9000/minio/health/live || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+
+  minio-init:
+    image: bitnamilegacy/minio-client:latest
+    container_name: wisdomstream_minio_init
+    depends_on:
+      minio:
+        condition: service_healthy
+    environment:
+      MINIO_ROOT_USER: ${MINIO_ACCESS_KEY}
+      MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY}
+    entrypoint: >
+      /bin/sh -c "
+      until mc alias set local http://minio:9000 $${MINIO_ROOT_USER} $${MINIO_ROOT_PASSWORD}; do sleep 1; done;
+      mc mb --ignore-existing local/wisdomstream-avatars;
+      mc mb --ignore-existing local/wisdomstream-banners;
+      mc mb --ignore-existing local/wisdomstream-thumbnails;
+      mc anonymous set download local/wisdomstream-avatars;
+      mc anonymous set download local/wisdomstream-banners;
+      mc anonymous set download local/wisdomstream-thumbnails;
+      "
+
+volumes:
+  postgres_data:
+  redis_data:
+  minio_data:
