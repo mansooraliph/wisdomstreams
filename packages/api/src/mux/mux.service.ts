@@ -60,6 +60,20 @@ export class MuxService {
     await mux.video.assets.delete(assetId);
   }
 
+  /**
+   * Direct API poll, used as a fallback when the webhook hasn't (or can't)
+   * reach us — e.g. local dev with no public tunnel in front of localhost.
+   */
+  async getUpload(uploadId: string) {
+    const mux = this.requireClient();
+    return mux.video.uploads.retrieve(uploadId);
+  }
+
+  async getAsset(assetId: string) {
+    const mux = this.requireClient();
+    return mux.video.assets.retrieve(assetId);
+  }
+
   async getSignedPlaybackToken(playbackId: string): Promise<string> {
     const mux = this.requireClient();
     return mux.jwt.signPlaybackId(playbackId, { expiration: "1d" });

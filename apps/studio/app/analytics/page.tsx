@@ -1,7 +1,13 @@
+import { BarChart2 } from "lucide-react";
+import { ComingSoon } from "../../components/coming-soon";
+
 export default function AnalyticsPage() {
   return (
-    <main className="p-6">
-      <h1 className="text-xl font-semibold">Analytics</h1>
-    </main>
+    <ComingSoon
+      icon={BarChart2}
+      title="Analytics"
+      description="Deep-dive analytics (watch time, traffic sources, audience demographics) need dedicated event tracking that isn't built yet. Basic totals are on the Dashboard."
+      cta={{ label: "Go to dashboard", href: "/dashboard" }}
+    />
   );
 }

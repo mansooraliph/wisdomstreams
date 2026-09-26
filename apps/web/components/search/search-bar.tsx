@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Search } from "lucide-react";
 import { apiFetch } from "../../lib/api";
 
 export function SearchBar() {
@@ -30,12 +31,13 @@ export function SearchBar() {
   };
 
   return (
-    <div className="relative w-full max-w-md">
+    <div className="relative w-full max-w-[600px]">
       <form
         onSubmit={(e) => {
           e.preventDefault();
           if (q.trim()) submit(q.trim());
         }}
+        className="flex"
       >
         <input
           value={q}
@@ -43,11 +45,18 @@ export function SearchBar() {
           onFocus={() => setShowSuggestions(true)}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 150)}
           placeholder="Search"
-          className="w-full rounded-full border px-4 py-1.5 text-sm"
+          className="w-full rounded-l-full border border-gray-300 px-4 py-2 text-sm focus:border-blue-500 focus:outline-none"
         />
+        <button
+          type="submit"
+          aria-label="Search"
+          className="flex flex-shrink-0 items-center justify-center rounded-r-full border border-l-0 border-gray-300 bg-gray-50 px-5 hover:bg-gray-100"
+        >
+          <Search size={18} />
+        </button>
       </form>
       {showSuggestions && suggestions.length > 0 && (
-        <ul className="absolute z-10 mt-1 w-full rounded border bg-white shadow">
+        <ul className="absolute z-10 mt-1 w-full rounded-xl border bg-white py-2 shadow-lg">
           {suggestions.map((s) => (
             <li key={s}>
               <button

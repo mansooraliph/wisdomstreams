@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { Tag, Plus, Trash2 } from "lucide-react";
 import type { CategoryItem } from "@wisdomstream/shared";
 import { apiFetch } from "../../lib/api";
 
@@ -39,46 +40,54 @@ export default function AdminSettingsPage() {
   };
 
   return (
-    <main className="mx-auto max-w-lg space-y-6 p-6">
+    <main className="mx-auto max-w-lg space-y-6 p-8">
       <div>
-        <h1 className="text-xl font-semibold">System settings</h1>
-        <p className="text-sm text-gray-500">
-          Rate limits, upload caps, and feature flags aren&apos;t configurable here yet — they're
+        <h1 className="text-2xl font-bold">System settings</h1>
+        <p className="mt-1 text-sm text-gray-500">
+          Rate limits, upload caps, and feature flags aren&apos;t configurable here yet — they&apos;re
           environment-level settings in the API. This page manages video categories.
         </p>
       </div>
 
-      <div className="space-y-2">
-        <h2 className="text-sm font-semibold">Categories</h2>
+      <div className="rounded-xl border bg-white p-6">
+        <h2 className="mb-3 flex items-center gap-2 font-semibold">
+          <Tag size={16} className="text-gray-400" />
+          Categories
+        </h2>
         <div className="flex gap-2">
           <input
             value={name}
             onChange={(e) => setName(e.target.value)}
             placeholder="Name"
-            className="flex-1 rounded border px-3 py-1.5 text-sm"
+            className="flex-1 rounded-full border px-4 py-2 text-sm"
           />
           <input
             value={slug}
             onChange={(e) => setSlug(e.target.value)}
             placeholder="slug"
-            className="flex-1 rounded border px-3 py-1.5 text-sm"
+            className="flex-1 rounded-full border px-4 py-2 text-sm"
           />
-          <button onClick={create} className="rounded bg-blue-600 px-3 py-1.5 text-sm font-medium text-white">
-            Add
+          <button
+            onClick={create}
+            className="flex items-center gap-1 rounded-full bg-black px-4 py-2 text-sm font-semibold text-white hover:bg-gray-800"
+          >
+            <Plus size={14} /> Add
           </button>
         </div>
 
         {loading ? (
-          <p className="text-sm text-gray-500">Loading...</p>
+          <p className="mt-4 text-sm text-gray-500">Loading...</p>
+        ) : categories.length === 0 ? (
+          <p className="mt-4 text-sm text-gray-500">No categories yet.</p>
         ) : (
-          <ul className="divide-y">
+          <ul className="mt-4 divide-y">
             {categories.map((c) => (
-              <li key={c.id} className="flex items-center justify-between py-2 text-sm">
+              <li key={c.id} className="flex items-center justify-between py-2.5 text-sm">
                 <span>
                   {c.name} <span className="text-xs text-gray-400">({c.slug})</span>
                 </span>
-                <button onClick={() => remove(c.id)} className="text-xs text-red-600 hover:underline">
-                  Delete
+                <button onClick={() => remove(c.id)} className="text-gray-400 hover:text-red-600">
+                  <Trash2 size={15} />
                 </button>
               </li>
             ))}

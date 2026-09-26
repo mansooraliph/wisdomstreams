@@ -252,7 +252,16 @@ export class VideosService {
   }
 
   async getUploadStatus(userId: string, videoId: string) {
-    const video = await this.assertOwnsVideo(userId, videoId);
+    let video = await this.assertOwnsVideo(userId, videoId);
+
+    // The Mux webhook only reaches us if this server has a public URL (a
+    // real deployment, or a tunnel like ngrok in dev). Without that, DB
+    // status would stay "waiting" forever even after Mux finishes
+    // processing — so poll Mux's API directly as a fallback.
+    if (video.muxStatus !== "ready" && video.muxStatus !== "errored") {
+      video = await this.reconcileWithMux(video);
+    }
+
     return {
       muxStatus: video.muxStatus,
       muxPlaybackId: video.muxPlaybackId,
@@ -260,6 +269,49 @@ export class VideosService {
       aspectRatio: video.aspectRatio,
       thumbnailUrl: video.thumbnailUrl,
     };
+  }
+
+  private async reconcileWithMux(video: Video): Promise<Video> {
+    try {
+      let assetId = video.muxAssetId;
+
+      if (!assetId && video.muxUploadId) {
+        const upload = await this.mux.getUpload(video.muxUploadId);
+        if (upload.status === "errored") {
+          return this.prisma.video.update({ where: { id: video.id }, data: { muxStatus: "errored" } });
+        }
+        assetId = upload.asset_id ?? null;
+        if (assetId) {
+          video = await this.prisma.video.update({ where: { id: video.id }, data: { muxAssetId: assetId } });
+        }
+      }
+
+      if (!assetId) return video; // Mux hasn't linked an asset to this upload yet.
+
+      const asset = await this.mux.getAsset(assetId);
+      if (asset.status === "errored") {
+        return this.prisma.video.update({ where: { id: video.id }, data: { muxStatus: "errored" } });
+      }
+      if (asset.status === "ready") {
+        const updated = await this.prisma.video.update({
+          where: { id: video.id },
+          data: {
+            muxAssetId: assetId,
+            muxPlaybackId: asset.playback_ids?.[0]?.id,
+            muxStatus: "ready",
+            duration: asset.duration,
+            aspectRatio: asset.aspect_ratio,
+          },
+        });
+        await this.syncSearchIndex(updated);
+        return updated;
+      }
+
+      return video; // Still preparing on Mux's side.
+    } catch {
+      // Mux API hiccup — don't fail the status check, just report current DB state.
+      return video;
+    }
   }
 
   async updateChapters(userId: string, videoId: string, dto: UpdateChaptersDto) {
