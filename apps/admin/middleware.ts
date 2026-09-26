@@ -41,9 +41,21 @@ async function tryRefresh(refreshToken: string): Promise<{ access: string; refre
   return access && refresh ? { access, refresh } : null;
 }
 
+// Next.js's own req.nextUrl.href reports the connection's actual protocol
+// (plain http, since nginx terminates TLS and proxies internally over http)
+// and strips this app's basePath, so reconstruct manually from headers
+// instead — otherwise the login redirect_url comes back wrong (http:// and
+// missing /admin) once this sits behind a reverse proxy.
+function currentUrl(req: NextRequest): string {
+  const host = req.headers.get("host") ?? req.nextUrl.host;
+  const proto = req.headers.get("x-forwarded-proto") ?? req.nextUrl.protocol.replace(":", "");
+  const basePath = process.env.NEXT_BASE_PATH ?? "";
+  return `${proto}://${host}${basePath}${req.nextUrl.pathname}${req.nextUrl.search}`;
+}
+
 function redirectToLogin(req: NextRequest) {
   const loginUrl = new URL("/login", WEB_APP_URL);
-  loginUrl.searchParams.set("redirect_url", req.nextUrl.href);
+  loginUrl.searchParams.set("redirect_url", currentUrl(req));
   return NextResponse.redirect(loginUrl);
 }
 

@@ -23,8 +23,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // back empty, the visitor isn't really authenticated, so send them to
   // login instead of showing the "wrong role" message.
   if (me.data === null) {
-    const host = (await headers()).get("host");
-    const currentUrl = `http://${host ?? "localhost:3003"}`;
+    const h = await headers();
+    const host = h.get("host") ?? "localhost:3003";
+    const proto = h.get("x-forwarded-proto") ?? "http";
+    // In production this app is mounted at NEXT_BASE_PATH (e.g. /admin)
+    // behind nginx — include it so a signed-out visit here lands back on
+    // this app after login, not on the root domain's home page.
+    const basePath = process.env.NEXT_BASE_PATH ?? "";
+    const currentUrl = `${proto}://${host}${basePath}`;
     redirect(`${WEB_APP_URL}/login?redirect_url=${encodeURIComponent(currentUrl)}`);
   }
 
