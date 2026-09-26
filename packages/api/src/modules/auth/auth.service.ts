@@ -9,7 +9,7 @@ import { EmailService } from "../../email/email.service";
 import type { RegisterDto } from "./dto/register.dto";
 import type { LoginDto } from "./dto/login.dto";
 
-const ACCESS_TOKEN_TTL = "15m";
+const ACCESS_TOKEN_TTL = "24h";
 const REFRESH_TOKEN_TTL_SECONDS = 60 * 60 * 24 * 7; // 7 days
 const PASSWORD_RESET_TTL_MS = 60 * 60 * 1000; // 1 hour
 const EMAIL_VERIFY_TTL_MS = 24 * 60 * 60 * 1000; // 24 hours
