@@ -2,10 +2,11 @@
 
 import { useState } from "react";
 import Link from "next/link";
-import { Menu, Bell, Video, LogOut, Settings } from "lucide-react";
+import { Menu, Bell, Video, LogOut, Settings, Search } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { SearchBar } from "../../components/search/search-bar";
-import { Sidebar } from "../../components/sidebar";
+import { Sidebar, MobileDrawer } from "../../components/sidebar";
+import { MobileTabBar } from "../../components/mobile-tab-bar";
 import { AvatarCircle } from "../../components/avatar-circle";
 
 const STUDIO_URL = process.env.NEXT_PUBLIC_STUDIO_URL ?? "http://localhost:3002";
@@ -13,16 +14,20 @@ const STUDIO_URL = process.env.NEXT_PUBLIC_STUDIO_URL ?? "http://localhost:3002"
 export default function MainLayout({ children }: { children: React.ReactNode }) {
   const { user, loading, logout } = useAuth();
   const [collapsed, setCollapsed] = useState(false);
+  const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
 
   return (
     <div className="min-h-screen bg-white">
-      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-4 bg-white px-4">
-        <div className="flex flex-shrink-0 items-center gap-4">
+      <header className="fixed inset-x-0 top-0 z-30 flex h-14 items-center justify-between gap-2 bg-white px-2 sm:gap-4 sm:px-4">
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-4">
           <button
-            onClick={() => setCollapsed((c) => !c)}
+            onClick={() => {
+              setCollapsed((c) => !c);
+              setMobileNavOpen((o) => !o);
+            }}
             className="rounded-full p-2 hover:bg-gray-100"
-            aria-label="Toggle sidebar"
+            aria-label="Toggle menu"
           >
             <Menu size={22} />
           </button>
@@ -34,11 +39,14 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
           </Link>
         </div>
 
-        <div className="flex flex-1 justify-center">
+        <div className="hidden flex-1 justify-center sm:flex">
           <SearchBar />
         </div>
 
-        <div className="flex flex-shrink-0 items-center gap-2">
+        <div className="flex flex-shrink-0 items-center gap-1 sm:gap-2">
+          <Link href="/search" className="rounded-full p-2 hover:bg-gray-100 sm:hidden" aria-label="Search">
+            <Search size={22} />
+          </Link>
           {loading ? null : user ? (
             <>
               <a
@@ -94,8 +102,11 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
       </header>
 
       <Sidebar loggedIn={!!user} collapsed={collapsed} />
+      <MobileDrawer open={mobileNavOpen} onClose={() => setMobileNavOpen(false)} loggedIn={!!user} />
 
-      <div className={`pt-14 ${collapsed ? "sm:pl-[72px]" : "sm:pl-60"}`}>{children}</div>
+      <div className={`pt-14 pb-14 sm:pb-0 ${collapsed ? "sm:pl-[72px]" : "sm:pl-60"}`}>{children}</div>
+
+      <MobileTabBar />
     </div>
   );
 }

@@ -17,13 +17,13 @@ export default function HomePage() {
   }, []);
 
   return (
-    <main className="p-6">
+    <main className="pb-4 sm:p-6">
       {loading ? (
-        <p className="text-sm text-gray-500">Loading...</p>
+        <p className="p-4 text-sm text-gray-500 sm:p-0">Loading...</p>
       ) : videos.length === 0 ? (
-        <p className="text-sm text-gray-500">No videos yet. Check back soon.</p>
+        <p className="p-4 text-sm text-gray-500 sm:p-0">No videos yet. Check back soon.</p>
       ) : (
-        <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
+        <div className="grid grid-cols-1 gap-0 sm:grid-cols-3 sm:gap-x-6 sm:gap-y-8 lg:grid-cols-4">
           {videos.map((v) => (
             <VideoCard key={v.id} video={v} />
           ))}

@@ -10,8 +10,8 @@ function formatDuration(seconds: number | null): string {
 
 export function VideoCard({ video }: { video: VideoSummary }) {
   return (
-    <Link href={`/watch/${video.id}`} className="block">
-      <div className="relative aspect-video overflow-hidden rounded-lg bg-gray-200">
+    <Link href={`/watch/${video.id}`} className="block border-b pb-3 sm:border-0 sm:pb-0">
+      <div className="relative aspect-video overflow-hidden bg-gray-200 sm:rounded-lg">
         {video.thumbnailUrl && (
           // eslint-disable-next-line @next/next/no-img-element
           <img src={video.thumbnailUrl} alt="" className="h-full w-full object-cover" />
@@ -22,8 +22,10 @@ export function VideoCard({ video }: { video: VideoSummary }) {
           </span>
         )}
       </div>
-      <p className="mt-2 line-clamp-2 text-sm font-medium">{video.title}</p>
-      <p className="text-xs text-gray-500">{video.viewCount} views</p>
+      <div className="px-3 pt-2 sm:px-0">
+        <p className="line-clamp-2 text-sm font-medium">{video.title}</p>
+        <p className="text-xs text-gray-500">{video.viewCount} views</p>
+      </div>
     </Link>
   );
 }
