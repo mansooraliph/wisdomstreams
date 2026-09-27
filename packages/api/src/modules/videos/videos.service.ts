@@ -18,6 +18,16 @@ import type { UpdateChaptersDto } from "./dto/update-chapters.dto";
 
 const THUMBNAIL_BUCKET = process.env.MINIO_BUCKET_THUMBNAILS ?? "wisdomstream-thumbnails";
 
+/** Mux auto-generates a thumbnail for every public playback ID at this URL — no extra API call needed. */
+function muxThumbnailUrl(playbackId: string | undefined): string | undefined {
+  return playbackId ? `https://image.mux.com/${playbackId}/thumbnail.jpg` : undefined;
+}
+
+/** A Mux-hosted thumbnail isn't a file in our own bucket — nothing to delete there. */
+function isOwnStorageThumbnail(url: string): boolean {
+  return !url.startsWith("https://image.mux.com/");
+}
+
 @Injectable()
 export class VideosService {
   constructor(
@@ -218,7 +228,7 @@ export class VideosService {
     ]!;
     const url = await this.storage.uploadFile(THUMBNAIL_BUCKET, file.buffer, file.mimetype, extension);
 
-    if (video.thumbnailUrl) {
+    if (video.thumbnailUrl && isOwnStorageThumbnail(video.thumbnailUrl)) {
       await this.storage.deleteFile(THUMBNAIL_BUCKET, video.thumbnailUrl);
     }
 
@@ -243,7 +253,7 @@ export class VideosService {
     if (video.muxAssetId) {
       await this.mux.deleteAsset(video.muxAssetId);
     }
-    if (video.thumbnailUrl) {
+    if (video.thumbnailUrl && isOwnStorageThumbnail(video.thumbnailUrl)) {
       await this.storage.deleteFile(THUMBNAIL_BUCKET, video.thumbnailUrl);
     }
 
@@ -293,14 +303,16 @@ export class VideosService {
         return this.prisma.video.update({ where: { id: video.id }, data: { muxStatus: "errored" } });
       }
       if (asset.status === "ready") {
+        const playbackId = asset.playback_ids?.[0]?.id;
         const updated = await this.prisma.video.update({
           where: { id: video.id },
           data: {
             muxAssetId: assetId,
-            muxPlaybackId: asset.playback_ids?.[0]?.id,
+            muxPlaybackId: playbackId,
             muxStatus: "ready",
             duration: asset.duration,
             aspectRatio: asset.aspect_ratio,
+            thumbnailUrl: video.thumbnailUrl ?? muxThumbnailUrl(playbackId),
           },
         });
         await this.syncSearchIndex(updated);
@@ -357,14 +369,16 @@ export class VideosService {
         });
         if (!target) break;
 
+        const playbackId = playbackIds?.[0]?.id;
         const updated = await this.prisma.video.update({
           where: { id: target.id },
           data: {
             muxAssetId: assetId,
-            muxPlaybackId: playbackIds?.[0]?.id,
+            muxPlaybackId: playbackId,
             muxStatus: "ready",
             duration,
             aspectRatio,
+            thumbnailUrl: target.thumbnailUrl ?? muxThumbnailUrl(playbackId),
           },
         });
         await this.syncSearchIndex(updated);
