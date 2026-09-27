@@ -4,6 +4,7 @@ import { useCallback, useEffect, useRef, useState, type ElementRef } from "react
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import MuxPlayer from "@mux/mux-player-react";
+import { Gauge } from "lucide-react";
 import type { VideoDetail, VideoSummary } from "@wisdomstream/shared";
 import { apiFetch } from "../../../../lib/api";
 import { useAuth } from "../../../../lib/auth-context";
@@ -11,6 +12,7 @@ import { VideoCard } from "../../../../components/feed/video-card";
 import { CommentList } from "../../../../components/comments/comment-list";
 
 const PROGRESS_SAVE_INTERVAL_MS = 10_000;
+const PLAYBACK_RATES = [0.25, 0.5, 0.75, 1, 1.25, 1.5, 1.75, 2];
 
 export default function WatchPage() {
   const { id } = useParams<{ id: string }>();
@@ -24,16 +26,17 @@ export default function WatchPage() {
   const lastSavedProgress = useRef(0);
   const playerRef = useRef<ElementRef<typeof MuxPlayer>>(null);
   const [reaction, setReaction] = useState<"like" | "dislike" | null>(null);
+  const [playbackRate, setPlaybackRate] = useState(1);
+  const [speedMenuOpen, setSpeedMenuOpen] = useState(false);
 
-  // Mux Player's default "sm" breakpoint (470px) hides the playback-rate menu
-  // below that width — narrower than almost every phone viewport, so speed
-  // control silently disappears on mobile. Lower it so phones still cross the
-  // threshold. Not a typed React prop on this version, so set it directly.
-  useEffect(() => {
-    playerRef.current?.setAttribute("breakpoints", "sm:320");
-  }, [video?.muxPlaybackId]);
+  const changePlaybackRate = (rate: number) => {
+    if (playerRef.current) playerRef.current.playbackRate = rate;
+    setPlaybackRate(rate);
+    setSpeedMenuOpen(false);
+  };
 
   useEffect(() => {
+    setPlaybackRate(1);
     (async () => {
       const videoRes = await apiFetch<VideoDetail>(`/videos/${id}`);
       if (videoRes.error || !videoRes.data) {
@@ -105,6 +108,40 @@ export default function WatchPage() {
             style={{ aspectRatio: "16/9", width: "100%" }}
             onTimeUpdate={(e) => onTimeUpdate((e.target as HTMLMediaElement).currentTime)}
           />
+        )}
+
+        {/* Mux Player's built-in speed menu hides itself below ~470px width —
+            narrower than almost every phone — so it's effectively invisible
+            on mobile. This gives mobile viewers an always-visible substitute;
+            desktop keeps using the native control. */}
+        {video.muxStatus === "ready" && video.muxPlaybackId && (
+          <div className="relative sm:hidden">
+            <button
+              onClick={() => setSpeedMenuOpen((o) => !o)}
+              className="flex items-center gap-1.5 rounded-full border px-3 py-1.5 text-sm"
+            >
+              <Gauge size={16} />
+              {playbackRate}x
+            </button>
+            {speedMenuOpen && (
+              <div
+                onMouseLeave={() => setSpeedMenuOpen(false)}
+                className="absolute left-0 top-10 z-10 w-28 rounded-xl border bg-white py-1 shadow-lg"
+              >
+                {PLAYBACK_RATES.map((rate) => (
+                  <button
+                    key={rate}
+                    onClick={() => changePlaybackRate(rate)}
+                    className={`block w-full px-4 py-1.5 text-left text-sm hover:bg-gray-50 ${
+                      rate === playbackRate ? "font-semibold text-blue-600" : ""
+                    }`}
+                  >
+                    {rate === 1 ? "Normal" : `${rate}x`}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         )}
 
         <div className="flex items-center justify-between">
