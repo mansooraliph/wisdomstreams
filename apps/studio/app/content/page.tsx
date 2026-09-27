@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Upload, Trash2, Eye } from "lucide-react";
+import { Upload, Trash2, Eye, Video as VideoIcon, ThumbsUp, Users } from "lucide-react";
 import type { Channel, StudioVideo } from "@wisdomstream/shared";
 import { apiFetch } from "../../lib/api";
 
@@ -55,6 +55,15 @@ export default function ContentPage() {
   if (loading) return <p className="p-8 text-sm text-gray-500">Loading...</p>;
   if (!channel) return <p className="p-8 text-sm text-gray-500">Create a channel first.</p>;
 
+  const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0);
+  const totalLikes = videos.reduce((sum, v) => sum + v.likeCount, 0);
+  const summaryStats = [
+    { label: "Videos", value: videos.length, icon: VideoIcon },
+    { label: "Views", value: totalViews, icon: Eye },
+    { label: "Likes", value: totalLikes, icon: ThumbsUp },
+    { label: "Subscribers", value: channel.subscriberCount, icon: Users },
+  ];
+
   return (
     <main className="p-8">
       <div className="mb-6 flex items-center justify-between">
@@ -66,6 +75,17 @@ export default function ContentPage() {
           <Upload size={16} />
           Upload video
         </Link>
+      </div>
+
+      <div className="mb-6 grid grid-cols-2 gap-4 sm:grid-cols-4">
+        {summaryStats.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="rounded-xl border bg-white p-4">
+            <p className="flex items-center gap-1.5 text-xs text-gray-500">
+              <Icon size={14} /> {label}
+            </p>
+            <p className="mt-1 text-2xl font-bold">{value.toLocaleString()}</p>
+          </div>
+        ))}
       </div>
 
       <div className="overflow-hidden rounded-xl border bg-white">
