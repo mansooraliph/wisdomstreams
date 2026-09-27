@@ -51,8 +51,18 @@ export class VideosController {
 
   @Get()
   @UseGuards(JwtAuthGuard)
-  async list(@CurrentUser() user: User, @Query("channelId") channelId: string) {
-    return this.videosService.getChannelVideosForOwner(user.id, channelId);
+  async list(
+    @CurrentUser() user: User,
+    @Query("channelId") channelId: string,
+    @Query("page") page?: string,
+    @Query("limit") limit?: string,
+  ) {
+    return this.videosService.getChannelVideosForOwner(
+      user.id,
+      channelId,
+      Number(page) || 1,
+      Number(limit) || 50,
+    );
   }
 
   @Get(":id")

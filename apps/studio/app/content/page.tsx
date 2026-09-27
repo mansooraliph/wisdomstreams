@@ -2,9 +2,20 @@
 
 import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
-import { Upload, Trash2, Eye, Video as VideoIcon, ThumbsUp, Users } from "lucide-react";
-import type { Channel, StudioVideo } from "@wisdomstream/shared";
+import {
+  Upload,
+  Trash2,
+  Eye,
+  Video as VideoIcon,
+  ThumbsUp,
+  Users,
+  ChevronLeft,
+  ChevronRight,
+} from "lucide-react";
+import type { Channel, ChannelOverview, PaginatedResult, StudioVideo } from "@wisdomstream/shared";
 import { apiFetch } from "../../lib/api";
+
+const PAGE_SIZE = 50;
 
 const VISIBILITY_STYLE: Record<string, string> = {
   PUBLIC: "bg-green-50 text-green-700",
@@ -29,40 +40,61 @@ function Badge({ label, className }: { label: string; className: string }) {
 
 export default function ContentPage() {
   const [channel, setChannel] = useState<Channel | null>(null);
+  const [overview, setOverview] = useState<ChannelOverview | null>(null);
   const [videos, setVideos] = useState<StudioVideo[]>([]);
+  const [total, setTotal] = useState(0);
+  const [page, setPage] = useState(1);
   const [loading, setLoading] = useState(true);
 
-  const load = useCallback(async () => {
-    const channelRes = await apiFetch<Channel[]>("/channels/me");
-    const ch = channelRes.data?.[0] ?? null;
-    setChannel(ch);
-    if (ch) {
-      const videosRes = await apiFetch<StudioVideo[]>(`/videos?channelId=${ch.id}`);
-      setVideos(videosRes.data ?? []);
-    }
-    setLoading(false);
+  const loadPage = useCallback(async (channelId: string, pageNum: number) => {
+    const videosRes = await apiFetch<PaginatedResult<StudioVideo>>(
+      `/videos?channelId=${channelId}&page=${pageNum}&limit=${PAGE_SIZE}`,
+    );
+    setVideos(videosRes.data?.items ?? []);
+    setTotal(videosRes.data?.total ?? 0);
   }, []);
 
   useEffect(() => {
-    load();
-  }, [load]);
+    (async () => {
+      const channelRes = await apiFetch<Channel[]>("/channels/me");
+      const ch = channelRes.data?.[0] ?? null;
+      setChannel(ch);
+      if (ch) {
+        const [overviewRes] = await Promise.all([
+          apiFetch<ChannelOverview>(`/channels/${ch.id}/overview`),
+          loadPage(ch.id, 1),
+        ]);
+        setOverview(overviewRes.data);
+      }
+      setLoading(false);
+    })();
+  }, [loadPage]);
+
+  const goToPage = async (pageNum: number) => {
+    if (!channel) return;
+    setPage(pageNum);
+    await loadPage(channel.id, pageNum);
+  };
 
   const deleteVideo = async (id: string) => {
     await apiFetch(`/videos/${id}`, { method: "DELETE" });
     setVideos((prev) => prev.filter((v) => v.id !== id));
+    setTotal((prev) => prev - 1);
   };
 
   if (loading) return <p className="p-8 text-sm text-gray-500">Loading...</p>;
   if (!channel) return <p className="p-8 text-sm text-gray-500">Create a channel first.</p>;
 
-  const totalViews = videos.reduce((sum, v) => sum + v.viewCount, 0);
-  const totalLikes = videos.reduce((sum, v) => sum + v.likeCount, 0);
   const summaryStats = [
-    { label: "Videos", value: videos.length, icon: VideoIcon },
-    { label: "Views", value: totalViews, icon: Eye },
-    { label: "Likes", value: totalLikes, icon: ThumbsUp },
-    { label: "Subscribers", value: channel.subscriberCount, icon: Users },
+    { label: "Videos", value: overview?.videoCount ?? 0, icon: VideoIcon },
+    { label: "Views", value: overview?.totalViews ?? 0, icon: Eye },
+    { label: "Likes", value: overview?.totalLikes ?? 0, icon: ThumbsUp },
+    { label: "Subscribers", value: overview?.subscriberCount ?? 0, icon: Users },
   ];
+
+  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const rangeStart = total === 0 ? 0 : (page - 1) * PAGE_SIZE + 1;
+  const rangeEnd = Math.min(page * PAGE_SIZE, total);
 
   return (
     <main className="p-8">
@@ -152,6 +184,33 @@ export default function ContentPage() {
           </table>
         )}
       </div>
+
+      {total > 0 && (
+        <div className="mt-4 flex items-center justify-between text-sm text-gray-600">
+          <p>
+            {rangeStart}–{rangeEnd} of {total}
+          </p>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => goToPage(page - 1)}
+              disabled={page <= 1}
+              className="flex items-center gap-1 rounded-full border px-3 py-1.5 font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              <ChevronLeft size={16} /> Prev
+            </button>
+            <span className="px-1">
+              Page {page} of {totalPages}
+            </span>
+            <button
+              onClick={() => goToPage(page + 1)}
+              disabled={page >= totalPages}
+              className="flex items-center gap-1 rounded-full border px-3 py-1.5 font-medium hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-40"
+            >
+              Next <ChevronRight size={16} />
+            </button>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

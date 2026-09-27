@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, type ElementRef } from "react";
 import { useParams } from "next/navigation";
 import Link from "next/link";
 import MuxPlayer from "@mux/mux-player-react";
@@ -22,7 +22,16 @@ export default function WatchPage() {
   const [notFound, setNotFound] = useState(false);
   const hasRecordedView = useRef(false);
   const lastSavedProgress = useRef(0);
+  const playerRef = useRef<ElementRef<typeof MuxPlayer>>(null);
   const [reaction, setReaction] = useState<"like" | "dislike" | null>(null);
+
+  // Mux Player's default "sm" breakpoint (470px) hides the playback-rate menu
+  // below that width — narrower than almost every phone viewport, so speed
+  // control silently disappears on mobile. Lower it so phones still cross the
+  // threshold. Not a typed React prop on this version, so set it directly.
+  useEffect(() => {
+    playerRef.current?.setAttribute("breakpoints", "sm:320");
+  }, [video?.muxPlaybackId]);
 
   useEffect(() => {
     (async () => {
@@ -87,9 +96,11 @@ export default function WatchPage() {
           </div>
         ) : (
           <MuxPlayer
+            ref={playerRef}
             playbackId={video.muxPlaybackId}
             startTime={startTime}
             streamType="on-demand"
+            autoPlay="any"
             metadata={{ video_title: video.title }}
             style={{ aspectRatio: "16/9", width: "100%" }}
             onTimeUpdate={(e) => onTimeUpdate((e.target as HTMLMediaElement).currentTime)}

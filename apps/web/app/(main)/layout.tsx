@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { Menu, Bell, Video, LogOut, Settings, Search } from "lucide-react";
 import { useAuth } from "../../lib/auth-context";
 import { SearchBar } from "../../components/search/search-bar";
@@ -16,6 +17,15 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
   const [collapsed, setCollapsed] = useState(false);
   const [mobileNavOpen, setMobileNavOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
+  const pathname = usePathname();
+
+  // Next.js's built-in scroll-to-top on navigation doesn't reliably fire
+  // between two instances of the same dynamic route (e.g. clicking a related
+  // video while already on /watch/[id]), leaving the new page scrolled to
+  // wherever the previous one was. Force it on every route change instead.
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [pathname]);
 
   return (
     <div className="min-h-screen bg-white">

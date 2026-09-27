@@ -225,10 +225,16 @@ export interface StudioVideo {
   updatedAt: string;
 }
 
+export interface PaginatedResult<T> {
+  items: T[];
+  total: number;
+}
+
 export interface ChannelOverview {
   subscriberCount: number;
   videoCount: number;
   totalViews: number;
+  totalLikes: number;
   recentVideos: StudioVideo[];
 }
 

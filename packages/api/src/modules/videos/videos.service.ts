@@ -55,9 +55,23 @@ export class VideosService {
     return { videoId: video.id, uploadUrl };
   }
 
-  async getChannelVideosForOwner(userId: string, channelId: string): Promise<Video[]> {
+  async getChannelVideosForOwner(
+    userId: string,
+    channelId: string,
+    page = 1,
+    limit = 50,
+  ): Promise<{ items: Video[]; total: number }> {
     await this.assertOwnsChannel(userId, channelId);
-    return this.prisma.video.findMany({ where: { channelId }, orderBy: { createdAt: "desc" } });
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.video.findMany({
+        where: { channelId },
+        orderBy: { createdAt: "desc" },
+        skip: (page - 1) * limit,
+        take: limit,
+      }),
+      this.prisma.video.count({ where: { channelId } }),
+    ]);
+    return { items, total };
   }
 
   /**

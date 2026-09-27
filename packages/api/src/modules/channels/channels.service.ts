@@ -104,9 +104,12 @@ export class ChannelsService {
 
   async getOverview(userId: string, channelId: string) {
     const channel = await this.assertOwnsChannel(userId, channelId);
-    const [videoCount, viewAggregate, recentVideos] = await Promise.all([
+    const [videoCount, aggregate, recentVideos] = await Promise.all([
       this.prisma.video.count({ where: { channelId } }),
-      this.prisma.video.aggregate({ where: { channelId }, _sum: { viewCount: true } }),
+      this.prisma.video.aggregate({
+        where: { channelId },
+        _sum: { viewCount: true, likeCount: true },
+      }),
       this.prisma.video.findMany({
         where: { channelId },
         orderBy: { createdAt: "desc" },
@@ -117,7 +120,8 @@ export class ChannelsService {
     return {
       subscriberCount: channel.subscriberCount,
       videoCount,
-      totalViews: viewAggregate._sum.viewCount ?? 0,
+      totalViews: aggregate._sum.viewCount ?? 0,
+      totalLikes: aggregate._sum.likeCount ?? 0,
       recentVideos,
     };
   }
